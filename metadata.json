@@ -1,0 +1,8 @@
+{
+  "name": "MarketHub AI",
+  "description": "A comprehensive e-commerce hub designed to automate marketplace management (Mercado Livre, Shopee, Shein) using advanced Gemini AI for title optimization, SEO descriptions, and image generation.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
