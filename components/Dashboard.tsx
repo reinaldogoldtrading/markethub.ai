@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import CloudBotLog from './CloudBotLog';
 import { Marketplace } from '../types';
+import { fintechApi } from '../services/api/fintechApi';
 
 const data = [
   { name: 'Seg', sales: 4000, growth: 2400 },
@@ -20,19 +21,24 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ addNotification }) => {
   const [sharing, setSharing] = useState(false);
+  const [credit, setCredit] = useState({ available: 0, total: 0 });
+
+  useEffect(() => {
+    fintechApi.checkCreditLimit().then(setCredit);
+  }, []);
 
   const stats = [
     { label: 'Vendas Totais', value: 'R$ 45.231,00', color: 'blue' },
-    { label: 'ROAS SuperAds', value: '5.2x', color: 'indigo' },
+    { label: 'Saldo Adiantável', value: `R$ ${credit.available.toLocaleString()}`, color: 'emerald' },
     { label: 'Taxa de Conversão', value: '4.82%', color: 'emerald' },
     { label: 'Insights CloudBot', value: '24 Ativos', color: 'orange' },
   ];
 
   const syncStatus = [
     { marketplace: Marketplace.MERCADO_LIVRE, status: 'synced', count: 124, lastSync: '2m atrás' },
+    { marketplace: Marketplace.AMAZON, status: 'synced', count: 56, lastSync: '10s atrás' },
     { marketplace: Marketplace.SHOPEE, status: 'synced', count: 89, lastSync: '5m atrás' },
     { marketplace: Marketplace.SHEIN, status: 'pending', count: 12, lastSync: 'Sincronizando...' },
-    { marketplace: Marketplace.TEMU, status: 'error', count: 3, lastSync: 'Erro de API' },
   ];
 
   const handleShare = () => {
@@ -59,11 +65,11 @@ const Dashboard: React.FC<DashboardProps> = ({ addNotification }) => {
       <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl relative overflow-hidden">
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-2">
-            <span className="bg-blue-600 text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-tighter">SuperAds Active</span>
-            <span className="bg-indigo-600 text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-tighter">CloudBot Online</span>
+            <span className="bg-blue-600 text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-tighter">Zero Capital Active</span>
+            <span className="bg-emerald-600 text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-tighter">Fintech Bridge OK</span>
           </div>
-          <h2 className="text-3xl font-bold mb-2">Você recuperou <span className="text-blue-400">42 horas</span> esta semana! ⚡</h2>
-          <p className="text-slate-400 text-lg max-w-xl">O CloudBot gerou 24 novas ideias e o SuperAds otimizou 15 campanhas automaticamente.</p>
+          <h2 className="text-3xl font-bold mb-2">Operação <span className="text-emerald-400">100% Antecipada</span>! ⚡</h2>
+          <p className="text-slate-400 text-lg max-w-xl">Você tem R$ {credit.available.toLocaleString()} para pagar fornecedores hoje, independente do repasse do ML.</p>
         </div>
         <button 
           onClick={handleShare}
@@ -76,7 +82,6 @@ const Dashboard: React.FC<DashboardProps> = ({ addNotification }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-8 space-y-8">
-           {/* Top Stats */}
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((stat, i) => (
               <div key={i} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-lg transition-all transform hover:-translate-y-1">
@@ -86,7 +91,6 @@ const Dashboard: React.FC<DashboardProps> = ({ addNotification }) => {
             ))}
           </div>
 
-          {/* Sync Monitor - From Blueprint */}
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm">
              <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-black text-slate-900">Monitor de Sincronização Global</h3>
@@ -118,7 +122,6 @@ const Dashboard: React.FC<DashboardProps> = ({ addNotification }) => {
              </div>
           </div>
 
-          {/* Revenue Chart */}
           <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
             <h3 className="text-xl font-black text-slate-900 mb-8">Fluxo de Caixa IA vs Real</h3>
             <div className="h-80 w-full">
@@ -160,6 +163,7 @@ const Dashboard: React.FC<DashboardProps> = ({ addNotification }) => {
              <div className="space-y-4">
                 {[
                   { name: 'API Mercado Livre', status: 'OK', color: 'emerald' },
+                  { name: 'Fintech Advance API', status: 'OK', color: 'emerald' },
                   { name: 'API Shopee', status: 'OK', color: 'emerald' },
                   { name: 'Veo Video Generator', status: 'OK', color: 'emerald' },
                   { name: 'CloudBot Core', status: 'LATENCY 12ms', color: 'emerald' },

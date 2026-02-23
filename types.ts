@@ -3,7 +3,15 @@ export enum Marketplace {
   MERCADO_LIVRE = 'Mercado Livre',
   SHOPEE = 'Shopee',
   SHEIN = 'Shein',
-  TEMU = 'Temu'
+  AMAZON = 'Amazon',
+  TEMU = 'Temu',
+  MAGALU = 'Magalu',
+  AMERICANAS = 'Americanas',
+  TIKTOK_SHOP = 'TikTok Shop',
+  ALIEXPRESS = 'AliExpress',
+  CARREFOUR = 'Carrefour',
+  KABUM = 'Kabum',
+  CASAS_BAHIA = 'Casas Bahia'
 }
 
 export enum SocialPlatform {
@@ -31,6 +39,7 @@ export interface Product {
   sku: string;
   name: string;
   price: number;
+  costPrice?: number;
   stock: number;
   marketplace: Marketplace;
   status: ProductStatus;
@@ -40,6 +49,47 @@ export interface Product {
   lastUpdated: string;
   image: string;
   description?: string;
+  trustScore?: number;
+}
+
+export interface AdCampaign {
+  id: string;
+  name: string;
+  platform: SocialPlatform;
+  status: 'active' | 'paused' | 'draft' | 'analyzing';
+  budget: number;
+  spent: number;
+  roas: number;
+  clicks: number;
+  conversions: number;
+  creatives: AdAsset[];
+}
+
+export interface AdAsset {
+  id: string;
+  type: 'image' | 'video';
+  url: string;
+  headline: string;
+  body: string;
+  cta: string;
+}
+
+export interface Order {
+  id: string;
+  customerName: string;
+  productName: string;
+  totalValue: number;
+  costValue: number;
+  marketplaceFee: number;
+  profit: number;
+  status: 'pending' | 'splitting' | 'paid_supplier' | 'shipped' | 'flagged_fraud' | 'quarantine';
+  riskScore: number;
+  cancellationRisk?: number; 
+  riskReason?: string;
+  timestamp: string;
+  marketplace: Marketplace;
+  trackingCode?: string;
+  potentialLoss?: number; 
 }
 
 export interface AIResponse {
@@ -49,6 +99,12 @@ export interface AIResponse {
   keywords: string[];
   suggestedCategory: string;
   suggestedPrice: number;
+  supplierInsight?: {
+    bestSupplierName: string;
+    bestSupplierPrice: number;
+    savingsPotential: number;
+    link: string;
+  };
 }
 
 export interface CrmMessage {
@@ -57,7 +113,7 @@ export interface CrmMessage {
   platform: Marketplace | SocialPlatform | 'Web (Social Listening)';
   text: string;
   sentiment: 'positive' | 'neutral' | 'negative';
-  type: 'public_comment' | 'private_message' | 'crisis_alert';
+  type: 'public_comment' | 'private_message' | 'crisis_alert' | 'confirmation_request';
   timestamp: string;
   aiDraft?: string;
   isRead: boolean;

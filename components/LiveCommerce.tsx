@@ -1,13 +1,14 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Product, LiveSessionRecord } from '../types';
-import { connectLiveAssistant, encode, decode, decodeAudioData, getLiveStrategicAdvice, generateLiveScript } from '../services/geminiService';
+// Fixed: Removed non-existent export getLiveStrategicAdvice
+import { connectLiveAssistant, encode, decode, decodeAudioData, generateLiveScript } from '../services/geminiService';
 import { LiveServerMessage } from '@google/genai';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface LiveCommerceProps {
   products: Product[];
-  addNotification: (t: string, type?: 'success' | 'info') => void;
+  addNotification: (t: string, type?: any) => void;
   updateProduct?: (p: Product) => void;
 }
 
@@ -29,7 +30,6 @@ interface StreamDestination {
 const mockHistory: LiveSessionRecord[] = [
   { id: 'h1', date: '2024-05-10', startTime: '19:00', duration: '45min', totalSales: 12500.50, peakViewers: 850, totalLikes: 4200, bestPlatform: 'TikTok' },
   { id: 'h2', date: '2024-05-12', startTime: '20:30', duration: '60min', totalSales: 18900.00, peakViewers: 1200, totalLikes: 7800, bestPlatform: 'Instagram' },
-  { id: 'h3', date: '2024-05-15', startTime: '15:00', duration: '30min', totalSales: 4200.20, peakViewers: 320, totalLikes: 1500, bestPlatform: 'YouTube' },
 ];
 
 const LiveCommerce: React.FC<LiveCommerceProps> = ({ products, addNotification, updateProduct }) => {
@@ -40,7 +40,6 @@ const LiveCommerce: React.FC<LiveCommerceProps> = ({ products, addNotification, 
   const [loading, setLoading] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [showQRCode, setShowQRCode] = useState(true);
-  const [aiStrategicAdvice, setAiStrategicAdvice] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'control' | 'analytics' | 'history'>('control');
   const [pastSessions, setPastSessions] = useState<LiveSessionRecord[]>(mockHistory);
   const [liveStartTime, setLiveStartTime] = useState<number | null>(null);
@@ -74,14 +73,18 @@ const LiveCommerce: React.FC<LiveCommerceProps> = ({ products, addNotification, 
       interval = setInterval(() => {
         setDestinations(prev => prev.map(d => {
           if (d.isLive) {
-            const newViewers = Math.max(0, d.stats.viewers + Math.floor(Math.random() * 10) - 4);
-            const newLikes = d.stats.likes + Math.floor(Math.random() * 20);
-            const sold = Math.random() > (isFlashSale ? 0.85 : 0.95) && selectedProduct ? d.stats.sales + livePrice : d.stats.sales;
+            const newViewers = Math.max(0, d.stats.viewers + Math.floor(Math.random() * 20) - 5);
+            const newLikes = d.stats.likes + Math.floor(Math.random() * 30);
+            const prob = isFlashSale ? 0.8 : 0.98;
+            const sold = Math.random() > prob && selectedProduct ? d.stats.sales + livePrice : d.stats.sales;
+            if (sold > d.stats.sales && addNotification) {
+               addNotification(`Venda via ${d.name}: R$ ${livePrice.toFixed(2)} 💸`, 'success');
+            }
             return { ...d, stats: { viewers: newViewers, likes: newLikes, sales: sold } };
           }
           return d;
         }));
-      }, 2000);
+      }, 3000);
     }
     return () => clearInterval(interval);
   }, [isLive, selectedProduct, livePrice, isFlashSale]);
@@ -98,7 +101,7 @@ const LiveCommerce: React.FC<LiveCommerceProps> = ({ products, addNotification, 
       setLiveStartTime(Date.now());
       addNotification("Estúdio Multistream Ativado! 🚀", "success");
     } catch (err) {
-      addNotification("Erro ao acessar câmera/microfone.", "info");
+      addNotification("Erro ao acessar câmera/microfone.", "error");
     } finally {
       setLoading(false);
     }
@@ -190,8 +193,7 @@ const LiveCommerce: React.FC<LiveCommerceProps> = ({ products, addNotification, 
     setShowOverlay(true);
     setLoading(true);
     try {
-      const activePlatforms = destinations.filter(d => d.isLive).map(d => d.name).join(', ');
-      const script = await generateLiveScript(`${product.name} (Transmitindo para: ${activePlatforms}. Preço normal R$ ${product.price}. Incentive o uso do QR Code)`);
+      const script = await generateLiveScript(`${product.name}. Preço normal R$ ${product.price}. Incentive o uso do QR Code para comprar.`);
       setLiveScript(script);
     } finally {
       setLoading(false);
@@ -204,11 +206,8 @@ const LiveCommerce: React.FC<LiveCommerceProps> = ({ products, addNotification, 
     setLoading(true);
     addNotification(`Oferta Relâmpago Lançada: R$ ${livePrice.toFixed(2)}! ⚡`, "success");
     try {
-      const script = await generateLiveScript(`${selectedProduct.name} - OFERTA RELÂMPAGO POR R$ ${livePrice.toFixed(2)}. Tag: ${offerTag}. Gere um script de extrema urgência.`);
+      const script = await generateLiveScript(`${selectedProduct.name} - OFERTA RELÂMPAGO POR R$ ${livePrice.toFixed(2)}. Urgência máxima.`);
       setLiveScript(script);
-      if (updateProduct) {
-        updateProduct({ ...selectedProduct, price: livePrice });
-      }
     } finally {
       setLoading(false);
     }
@@ -226,12 +225,10 @@ const LiveCommerce: React.FC<LiveCommerceProps> = ({ products, addNotification, 
   };
 
   const totalViewers = destinations.reduce((acc, d) => acc + d.stats.viewers, 0);
-  const totalSalesCurrent = destinations.reduce((acc, d) => acc + d.stats.sales, 0);
   const bestChannel = [...destinations].sort((a, b) => b.stats.sales - a.stats.sales)[0];
 
-  const productUrl = selectedProduct ? `https://markethub-loja.com/p/${selectedProduct.sku}?live_price=${livePrice}&campaign=${encodeURIComponent(offerTag)}` : "https://markethub.ai";
+  const productUrl = selectedProduct ? `https://markethub-loja.com/p/${selectedProduct.sku}?live_price=${livePrice}` : "https://markethub.ai";
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(productUrl)}&bgcolor=ffffff&color=0f172a&margin=1`;
-  const discountPercent = selectedProduct ? Math.round(((selectedProduct.price - livePrice) / selectedProduct.price) * 100) : 0;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[calc(100vh-180px)] animate-in fade-in duration-700">
@@ -263,7 +260,7 @@ const LiveCommerce: React.FC<LiveCommerceProps> = ({ products, addNotification, 
                         <p className={`text-[10px] font-black uppercase mb-1 ${isFlashSale ? 'text-yellow-300' : 'text-blue-600'}`}>
                            {isFlashSale ? offerTag : 'Destaque ⚡'}
                         </p>
-                        <h4 className="text-xl font-black leading-tight">{selectedProduct.name}</h4>
+                        <h4 className="text-xl font-black leading-tight truncate max-w-[200px]">{selectedProduct.name}</h4>
                         <div className="flex items-center gap-3">
                            {isFlashSale && <span className="text-sm line-through opacity-50 font-bold">R$ {selectedProduct.price.toFixed(2)}</span>}
                            <p className="text-3xl font-black">R$ {livePrice.toFixed(2)}</p>
@@ -293,7 +290,7 @@ const LiveCommerce: React.FC<LiveCommerceProps> = ({ products, addNotification, 
             {activeTab === 'control' && (
               <div className="grid grid-cols-4 md:grid-cols-8 gap-4 pb-4">
                 {products.map(p => (
-                  <button key={p.id} onClick={() => handleDisplayProduct(p)} className={`p-3 rounded-3xl border-2 transition-all flex flex-col items-center gap-2 ${selectedProduct?.id === p.id ? 'border-blue-600 bg-blue-50' : 'border-slate-100 bg-slate-50'}`}>
+                  <button key={p.id} onClick={() => handleDisplayProduct(p)} className={`p-3 rounded-3xl border-2 transition-all flex flex-col items-center gap-2 ${selectedProduct?.id === p.id ? 'border-blue-600 bg-blue-50' : 'border-slate-100 bg-slate-50 hover:border-blue-200'}`}>
                     <img src={p.image} className="w-12 h-12 rounded-xl object-cover" alt="" />
                     <p className="text-[9px] font-bold text-slate-900 truncate w-full text-center">{p.name}</p>
                   </button>
@@ -322,6 +319,22 @@ const LiveCommerce: React.FC<LiveCommerceProps> = ({ products, addNotification, 
                 </div>
               </div>
             )}
+            {activeTab === 'history' && (
+              <div className="space-y-3">
+                 {pastSessions.map(session => (
+                   <div key={session.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-black text-slate-900">{session.date} - {session.startTime}</p>
+                        <p className="text-[10px] text-slate-400">Canal Top: {session.bestPlatform}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-emerald-600">R$ {session.totalSales.toFixed(2)}</p>
+                        <p className="text-[9px] font-bold text-slate-400">{session.peakViewers} Peak Viewers</p>
+                      </div>
+                   </div>
+                 ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -330,8 +343,8 @@ const LiveCommerce: React.FC<LiveCommerceProps> = ({ products, addNotification, 
         {selectedProduct ? (
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-xl flex flex-col gap-6">
             <div>
-              <h4 className="font-bold text-sm text-slate-900">Configuração de Oferta Live</h4>
-              <p className="text-[10px] text-slate-400 font-black uppercase">Ajuste Dinâmico</p>
+              <h4 className="font-bold text-sm text-slate-900">Oferta Live</h4>
+              <p className="text-[10px] text-slate-400 font-black uppercase">Preço Dinâmico</p>
             </div>
             <div className="space-y-4">
               <input type="text" value={offerTag} onChange={e => setOfferTag(e.target.value)} className="w-full bg-slate-50 border p-3 rounded-2xl text-xs font-bold" />
@@ -342,12 +355,8 @@ const LiveCommerce: React.FC<LiveCommerceProps> = ({ products, addNotification, 
                   <p className="text-sm font-bold text-slate-400 line-through">R$ {selectedProduct.price.toFixed(2)}</p>
                 </div>
               </div>
-              <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 flex justify-between">
-                 <p className="text-[9px] font-black text-emerald-600 uppercase">Desconto</p>
-                 <p className="text-lg font-black text-emerald-700">{discountPercent}% OFF</p>
-              </div>
-              <button onClick={launchFlashSale} disabled={loading} className="w-full bg-red-600 text-white font-black py-5 rounded-[2rem] hover:bg-red-700 transition-all">
-                ⚡ Oferta Relâmpago
+              <button onClick={launchFlashSale} disabled={loading} className="w-full bg-red-600 text-white font-black py-5 rounded-[2rem] hover:bg-red-700 transition-all shadow-xl shadow-red-500/30">
+                ⚡ Aplicar na Transmissão
               </button>
             </div>
           </div>
@@ -362,10 +371,10 @@ const LiveCommerce: React.FC<LiveCommerceProps> = ({ products, addNotification, 
              </div>
              <div className="space-y-2">
                {destinations.map(d => (
-                 <div key={d.id} className="p-4 bg-slate-50 rounded-2xl flex items-center justify-between">
+                 <div key={d.id} className="p-4 bg-slate-50 rounded-2xl flex items-center justify-between group">
                    <span className="text-xs font-bold">{d.icon} {d.name}</span>
-                   <button onClick={() => toggleDestinationStream(d.id)} disabled={!isLive} className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase ${d.isLive ? 'bg-red-100 text-red-600' : 'bg-slate-200 text-slate-500'}`}>
-                     {d.isLive ? 'OFF' : 'ON'}
+                   <button onClick={() => toggleDestinationStream(d.id)} disabled={!isLive} className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${d.isLive ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}>
+                     {d.isLive ? 'Parar' : 'Transmitir'}
                    </button>
                  </div>
                ))}
@@ -373,21 +382,31 @@ const LiveCommerce: React.FC<LiveCommerceProps> = ({ products, addNotification, 
           </div>
         )}
 
-        <div className="bg-slate-900 text-white p-8 rounded-[2.5rem] h-64 overflow-hidden flex flex-col">
+        <div className="bg-slate-900 text-white p-8 rounded-[2.5rem] flex-1 overflow-hidden flex flex-col">
             <h4 className="font-bold text-sm mb-4">Script IA Dinâmico</h4>
             {liveScript ? (
-              <div className="flex-1 overflow-y-auto text-xs space-y-3 custom-scrollbar">
-                <p className="italic text-blue-400">"{liveScript.hook}"</p>
-                <ul className="space-y-1 opacity-70">
-                  {liveScript.benefits.map((b, i) => <li key={i}>• {b}</li>)}
-                </ul>
+              <div className="flex-1 overflow-y-auto text-xs space-y-3 custom-scrollbar pr-2">
+                <p className="italic text-blue-400 font-bold">"{liveScript.hook}"</p>
+                <div className="space-y-2">
+                  <p className="text-[9px] font-black text-slate-500 uppercase">Benefícios</p>
+                  <ul className="space-y-1 opacity-70">
+                    {liveScript.benefits.map((b, i) => <li key={i}>• {b}</li>)}
+                  </ul>
+                </div>
+                <div className="pt-2">
+                   <p className="text-[9px] font-black text-slate-500 uppercase">Oferta</p>
+                   <p className="font-bold text-emerald-400">{liveScript.offer}</p>
+                </div>
               </div>
             ) : (
-              <p className="text-xs opacity-30 italic">Selecione um produto...</p>
+              <div className="flex-1 flex flex-col items-center justify-center opacity-30 text-center gap-3">
+                <span className="text-4xl">📝</span>
+                <p className="text-[10px] uppercase font-black">Aguardando Produto para Gerar Script</p>
+              </div>
             )}
         </div>
       </div>
-      <style>{`.mirror { transform: scaleX(-1); }.custom-scrollbar::-webkit-scrollbar { width: 4px; }.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }`}</style>
+      <style>{`.mirror { transform: scaleX(-1); }.custom-scrollbar::-webkit-scrollbar { width: 4px; }.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }`}</style>
     </div>
   );
 };

@@ -38,11 +38,16 @@ const Crm: React.FC<CrmProps> = ({ addNotification }) => {
           isRead: false
         };
         setMessages(prev => [newMsg, ...prev]);
-        if (addNotification) addNotification(`Nova interação no ${newMsg.platform}! 💬`, 'info');
+        
+        if (autonomousMode && addNotification) {
+          addNotification(`IA respondeu automaticamente para ${newMsg.customer}! 🤖`, 'success');
+        } else if (addNotification) {
+          addNotification(`Nova interação no ${newMsg.platform}! 💬`, 'info');
+        }
       }
-    }, 20000);
+    }, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [autonomousMode]);
 
   const handleSelectMessage = async (msg: CrmMessage) => {
     setSelectedMsg(msg);
@@ -67,7 +72,6 @@ const Crm: React.FC<CrmProps> = ({ addNotification }) => {
     if (addNotification) addNotification("Escaneando a web por crises de reputação...", "info");
     
     try {
-      // Usamos o termo "MarketHub AI" como marca padrão para o exemplo
       const listening = await getSocialListeningData("MarketHub AI");
       const alerts = await extractCrisisAlerts(listening.text);
       
@@ -122,12 +126,12 @@ const Crm: React.FC<CrmProps> = ({ addNotification }) => {
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-black text-slate-900">Unified Inbox</h3>
             <div className="flex items-center gap-2">
-               <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Autônomo</span>
+               <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{autonomousMode ? 'IA Ativa' : 'Manual'}</span>
                <button 
                 onClick={() => setAutonomousMode(!autonomousMode)}
-                className={`w-8 h-4 rounded-full relative p-0.5 transition-all ${autonomousMode ? 'bg-blue-600' : 'bg-slate-300'}`}
+                className={`w-10 h-5 rounded-full relative p-0.5 transition-all ${autonomousMode ? 'bg-emerald-500' : 'bg-slate-300'}`}
                >
-                 <div className={`w-3 h-3 bg-white rounded-full transition-all ${autonomousMode ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                 <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-all ${autonomousMode ? 'translate-x-5' : 'translate-x-0'}`}></div>
                </button>
             </div>
           </div>
@@ -145,7 +149,7 @@ const Crm: React.FC<CrmProps> = ({ addNotification }) => {
             className={`w-full py-3 rounded-2xl font-black text-[10px] uppercase transition-all flex items-center justify-center gap-2 ${isScanningCrisis ? 'bg-slate-100 text-slate-400' : 'bg-slate-900 text-white hover:bg-red-600 shadow-lg'}`}
           >
             {isScanningCrisis ? <div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div> : '🔍'}
-            Escanear Gestão de Crise (Social Listening)
+            Escanear Gestão de Crise
           </button>
         </div>
 
@@ -188,7 +192,7 @@ const Crm: React.FC<CrmProps> = ({ addNotification }) => {
             </button>
           ))}
           {filteredMessages.length === 0 && (
-            <div className="py-20 text-center opacity-30 italic text-sm">Nenhuma mensagem neste filtro. ☕</div>
+            <div className="py-20 text-center opacity-30 italic text-sm">Nenhuma interação encontrada. ☕</div>
           )}
         </div>
       </div>
@@ -235,7 +239,7 @@ const Crm: React.FC<CrmProps> = ({ addNotification }) => {
                     <span className="text-3xl">🚨</span>
                     <div>
                       <h5 className="font-black text-sm uppercase tracking-widest mb-1">Modo Gestão de Crise Ativado</h5>
-                      <p className="text-xs text-red-100">Esta menção foi encontrada fora dos seus canais oficiais e pode afetar sua reputação. A IA preparou uma resposta diplomática.</p>
+                      <p className="text-xs text-red-100">Esta menção foi encontrada fora dos seus canais oficiais. A IA preparou uma resposta diplomática.</p>
                     </div>
                  </div>
                )}
@@ -297,10 +301,6 @@ const Crm: React.FC<CrmProps> = ({ addNotification }) => {
           </div>
         )}
       </div>
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.05); border-radius: 10px; }
-      `}</style>
     </div>
   );
 };

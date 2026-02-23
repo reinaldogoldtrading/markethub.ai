@@ -25,6 +25,21 @@ const integrationGuides = [
     security: 'Nunca pedimos sua senha. O acesso é via Token Digital criptografado.'
   },
   {
+    id: 'amazon-spapi',
+    title: 'Amazon (Selling Partner API)',
+    platform: 'Amazon',
+    difficulty: 'Médio',
+    time: '6 min',
+    steps: [
+      'Acesse sua conta na Amazon Seller Central.',
+      'Em "Apps & Services", clique em "Manage Your Apps".',
+      'Autorize o MarketHub AI como um integrador oficial.',
+      'Copie o seu LWA Client Secret e Client ID.',
+      'Cole as chaves na aba de Integrações do Hub para ativar a SP-API.'
+    ],
+    security: 'Conformidade total com a Política de Proteção de Dados de Dados da Amazon.'
+  },
+  {
     id: 'shopee-oauth',
     title: 'Shopee (Partner API)',
     platform: 'Shopee',
@@ -53,21 +68,6 @@ const integrationGuides = [
       'O CloudBot agora monitorará o estoque do fornecedor por você.'
     ],
     security: 'Sua chave de API é armazenada em um cofre digital (Vault) e nunca é exposta.'
-  },
-  {
-    id: 'shein-sync',
-    title: 'Shein (Sellers Portal)',
-    platform: 'Shein',
-    difficulty: 'Difícil',
-    time: '8 min',
-    steps: [
-      'Entre no Shein Sellers Center com sua conta comercial.',
-      'Vá em "System Settings" > "Open API".',
-      'Solicite as credenciais de "Third-Party ERP" (MarketHub).',
-      'Copie o App Key e o Secret Key para o MarketHub.',
-      'Valide a conexão para sincronizar seu catálogo global.'
-    ],
-    security: 'Integração via chaves de API restritas com permissões apenas de catálogo e pedidos.'
   }
 ];
 
@@ -88,7 +88,7 @@ const Academy: React.FC<{ addNotification: (t: string) => void }> = ({ addNotifi
 
   // Integration Support State
   const [integrationQuery, setIntegrationQuery] = useState('');
-  const [aiSupportResponse, setAiSupportResponse] = useState<string | null>(null);
+  const [aiSupportData, setAiSupportData] = useState<{text: string, sources: any[]} | null>(null);
 
   useEffect(() => {
     if (activeView === 'live' && !liveInsights) {
@@ -112,7 +112,7 @@ const Academy: React.FC<{ addNotification: (t: string) => void }> = ({ addNotifi
     setLoading(true);
     try {
       const response = await getIntegrationSupport(integrationQuery, selectedGuide.platform);
-      setAiSupportResponse(response);
+      setAiSupportData(response);
       addNotification("Resposta técnica gerada via Gemini Search! 🛡️");
     } finally {
       setLoading(false);
@@ -202,7 +202,7 @@ const Academy: React.FC<{ addNotification: (t: string) => void }> = ({ addNotifi
                 {integrationGuides.map(guide => (
                   <button 
                     key={guide.id}
-                    onClick={() => { setSelectedGuide(guide); setAiSupportResponse(null); }}
+                    onClick={() => { setSelectedGuide(guide); setAiSupportData(null); }}
                     className={`w-full p-6 text-left rounded-3xl border transition-all ${selectedGuide?.id === guide.id ? 'bg-blue-600 border-blue-600 text-white shadow-xl scale-[1.02]' : 'bg-white border-slate-200 text-slate-900 hover:border-blue-300'}`}
                   >
                     <div className="flex justify-between items-start mb-2">
@@ -286,10 +286,22 @@ const Academy: React.FC<{ addNotification: (t: string) => void }> = ({ addNotifi
                       </button>
                     </div>
 
-                    {aiSupportResponse && (
-                      <div className="bg-white/10 p-6 rounded-2xl border border-white/10 animate-in fade-in slide-in-from-top-4">
+                    {aiSupportData && (
+                      <div className="bg-white/10 p-6 rounded-2xl border border-white/10 animate-in fade-in slide-in-from-top-4 space-y-4">
                         <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-3">Resposta Técnica IA ✨</p>
-                        <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">{aiSupportResponse}</p>
+                        <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">{aiSupportData.text}</p>
+                        {aiSupportData.sources && aiSupportData.sources.length > 0 && (
+                          <div className="pt-4 border-t border-white/10">
+                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Fontes Consultadas</p>
+                             <div className="flex flex-col gap-2">
+                               {aiSupportData.sources.map((source: any, i: number) => (
+                                 <a key={i} href={source.web?.uri} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2">
+                                   🔗 {source.web?.title || 'Documentação Oficial'}
+                                 </a>
+                               ))}
+                             </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -347,8 +359,8 @@ const Academy: React.FC<{ addNotification: (t: string) => void }> = ({ addNotifi
                      <p className="text-xs text-yellow-900 font-medium">Priorizando vídeos curtos nas listagens. Recomenda-se usar a Video Factory.</p>
                   </div>
                   <div className="p-4 bg-orange-50 border border-orange-100 rounded-2xl">
-                     <p className="text-[10px] font-black text-orange-700 uppercase mb-1">Shopee</p>
-                     <p className="text-xs text-orange-900 font-medium">Aumento na conversão para combos "Leve 2 Pague 1" este mês.</p>
+                     <p className="text-[10px] font-black text-orange-700 uppercase mb-1">Amazon</p>
+                     <p className="text-xs text-orange-900 font-medium">Títulos curtos com foco em marca estão perfomando 15% melhor esta semana.</p>
                   </div>
                </div>
             </div>
